@@ -183,6 +183,7 @@ you have. Stories make it possible to design better!
 type alias Customizations data msg =
   { tableAttrs : List (Attribute msg)
   , caption : Maybe (HtmlDetails msg)
+  , colgroup : Maybe (HtmlDetails msg)
   , thead : List (String, Status, Attribute msg) -> HtmlDetails msg
   , tfoot : Maybe (HtmlDetails msg)
   , tbodyAttrs : List (Attribute msg)
@@ -206,6 +207,7 @@ defaultCustomizations : Customizations data msg
 defaultCustomizations =
   { tableAttrs = []
   , caption = Nothing
+  , colgroup = Nothing
   , thead = simpleThead
   , tfoot = Nothing
   , tbodyAttrs = []
@@ -422,6 +424,22 @@ view (Config { toId, toMsg, columns, customizations }) state data =
     sortedData =
       sort state columns data
 
+    caption =
+      case customizations.caption of
+        Nothing ->
+          identity
+
+        Just { attributes, children } ->
+          (::) <| Html.caption attributes children
+
+    colgroup =
+      case customizations.colgroup of
+        Nothing ->
+          identity
+
+        Just { attributes, children } ->
+          (::) <| Html.colgroup attributes children
+
     theadDetails =
       customizations.thead (List.map (toHeaderInfo state toMsg) columns)
 
@@ -440,13 +458,8 @@ view (Config { toId, toMsg, columns, customizations }) state data =
         Just { attributes, children } ->
           Html.tfoot attributes children :: tbody :: []
   in
-    Html.table customizations.tableAttrs <|
-      case customizations.caption of
-        Nothing ->
-          thead :: withFoot
-
-        Just { attributes, children } ->
-          Html.caption attributes children :: thead :: withFoot
+    Html.table customizations.tableAttrs
+      (caption <| colgroup <| thead :: withFoot)
 
 
 toHeaderInfo : State -> (State -> msg) -> ColumnData data msg -> ( String, Status, Attribute msg )
